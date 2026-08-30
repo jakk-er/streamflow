@@ -13,10 +13,10 @@ use std::sync::Mutex;
 
 use objc2::rc::Retained;
 use objc2::runtime::NSObjectProtocol;
-use objc2::{define_class, msg_send, DefinedClass};
+use objc2::{define_class, msg_send, DefinedClass, MainThreadOnly};
 use objc2_app_kit::{NSView, NSWindowOrderingMode};
-use objc2_core_graphics::{CGPath, CGPoint, CGRect, CGSize};
-use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize};
+use objc2_core_graphics::CGPath;
+use objc2_foundation::{CGPoint, CGRect, CGSize, MainThreadMarker, NSPoint, NSRect, NSSize};
 use objc2_quartz_core::CAShapeLayer;
 use tauri::AppHandle;
 

@@ -54,7 +54,7 @@ fn ensure_overlay(gtk_window: &gtk::ApplicationWindow, default_vbox: &gtk::Box) 
             // GTK asks this "where should the overlaid child go" on every re-allocate - lets plain queue_resize() in set_bounds move the socket.
             overlay.connect_get_child_position(move |_overlay, _child| {
                 let b = *bounds_slot().lock().unwrap();
-                Some(gtk::Rectangle { x: b.x, y: b.y, width: b.width.max(1), height: b.height.max(1) })
+                Some(gtk::Rectangle::new(b.x, b.y, b.width.max(1), b.height.max(1)))
             });
             gtk_window.add(&overlay);
             overlay.show_all();
@@ -114,7 +114,7 @@ pub fn set_region(handle: SendSocket, bounds: WindowBounds, exclude: &[WindowBou
     }
 
     gdk_window.shape_combine_region(Some(&full), 0, 0);
-    gdk_window.input_shape_combine_region(Some(&full), 0, 0);
+    gdk_window.input_shape_combine_region(&full, 0, 0);
 }
 
 pub fn destroy(handle: SendSocket) {
