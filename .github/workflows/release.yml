@@ -27,9 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Only the Windows build needs the LFS-tracked libmpv-2.dll (embedded
-          # mpv support is Windows-only) - skip the pull elsewhere to save LFS
-          # bandwidth quota.
+          # Only Windows needs the LFS-tracked libmpv-2.dll - Linux/macOS get libmpv from apt/brew instead.
           lfs: ${{ matrix.platform == 'windows-latest' }}
 
       - name: install Rust stable
@@ -41,7 +39,17 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf build-essential
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf build-essential libmpv-dev
+
+      - name: install mpv (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: |
+          brew install mpv
+          # Copied so install_name_tool can rewrite its ID to @rpath (brew's own copy has an absolute path baked in) - build.rs links against this fixed copy, not brew's.
+          mkdir -p src-tauri/native-libs/mpv-macos-runtime
+          dylib=$(find "$(brew --prefix mpv)/lib" -name 'libmpv*.dylib' ! -type l | head -n1)
+          cp "$dylib" src-tauri/native-libs/mpv-macos-runtime/libmpv.dylib
+          install_name_tool -id @rpath/libmpv.dylib src-tauri/native-libs/mpv-macos-runtime/libmpv.dylib
 
       - name: setup Node
         uses: actions/setup-node@v4

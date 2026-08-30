@@ -2,7 +2,7 @@ mod catchup;
 mod commands;
 mod db;
 mod error;
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "linux", target_os = "macos"))]
 mod mpv_player;
 mod net;
 mod parsers;
@@ -18,6 +18,11 @@ use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Must happen before GTK/GDK connect to a display (i.e. before anything
+    // else in this function) - see `force_x11_backend`'s doc comment.
+    #[cfg(target_os = "linux")]
+    force_x11_backend();
+
     // ERROR only, by request - suppresses info/warn/debug/trace globally at
     // the subscriber level instead of editing every call site individually.
     tracing_subscriber::fmt().with_max_level(tracing::Level::ERROR).init();
@@ -76,9 +81,9 @@ pub fn run() {
                 downloads_dir,
                 downloads: Mutex::new(HashMap::new()),
                 players: Mutex::new(HashMap::new()),
-                #[cfg(windows)]
+                #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
                 mpv_sessions: std::sync::Arc::new(Mutex::new(HashMap::new())),
-                #[cfg(windows)]
+                #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
                 mpv_start_lock: tokio::sync::Mutex::new(()),
             });
 
@@ -113,23 +118,23 @@ pub fn run() {
             commands::player::spawn_external_player,
             commands::player::kill_player,
             commands::player::get_player_status,
-            #[cfg(windows)]
+            #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
             commands::mpv::mpv_check_available,
-            #[cfg(windows)]
+            #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
             commands::mpv::mpv_start_session,
-            #[cfg(windows)]
+            #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
             commands::mpv::mpv_set_bounds,
-            #[cfg(windows)]
+            #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
             commands::mpv::mpv_stop_session,
-            #[cfg(windows)]
+            #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
             commands::mpv::mpv_get_session_state,
-            #[cfg(windows)]
+            #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
             commands::mpv::mpv_play_pause,
-            #[cfg(windows)]
+            #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
             commands::mpv::mpv_seek,
-            #[cfg(windows)]
+            #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
             commands::mpv::mpv_set_volume,
-            #[cfg(windows)]
+            #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
             commands::mpv::mpv_set_brightness,
             commands::settings::get_settings,
             commands::settings::update_settings,
@@ -178,6 +183,20 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+/// GTK/GDK's Wayland backend has no equivalent of "embed a foreign window
+/// by ID" - it's a protocol-level gap, not something mpv or this app can
+/// paper over. Embedded mpv (`mpv_player::window_linux`) needs a real X11
+/// window to target via `wid`, so this forces the whole app through
+/// XWayland even on a Wayland-default desktop (GNOME, etc.), guaranteeing
+/// one is always available. Must run before GTK/GDK connect to a display -
+/// called first thing in `run()`, before `tauri::Builder::default()`.
+#[cfg(target_os = "linux")]
+fn force_x11_backend() {
+    // SAFETY: called before any other thread exists and before anything
+    // else has read/written the environment.
+    unsafe { std::env::set_var("GDK_BACKEND", "x11") };
 }
 
 /// `bundle.resources` files land at `$INSTDIR\resources\...` in a packaged

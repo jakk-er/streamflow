@@ -37,6 +37,17 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "macOS": {
+      "frameworks": ["native-libs/mpv-macos-runtime/libmpv.dylib"]
+    },
+    "linux": {
+      "deb": {
+        "depends": ["libmpv2"]
+      },
+      "rpm": {
+        "depends": ["mpv-libs"]
+      }
+    }
   }
 }

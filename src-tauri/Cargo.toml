@@ -51,19 +51,38 @@ windows = { version = "0.61", features = [
     "Win32_UI_Controls",
     "Win32_System_LibraryLoader",
 ] }
+
 # In-process embedded MKV/HEVC playback (native <video> can't decode Matroska
 # at all - a demuxer gap, not a codec gap). Base crate only, no "render"
-# feature - this embeds via mpv's `wid` property (a real native child window
-# mpv draws into with its own GPU-accelerated output), not the render API's
-# off-screen FBO + CPU readback path, so no GL context of our own is needed.
-# Windows-only dependency, matching `mod mpv_player`'s own `#[cfg(windows)]` -
-# libmpv2-sys links against a system mpv via pkg-config, which non-Windows CI
-# runners don't have and this feature doesn't need there anyway.
+# feature - embeds via mpv's `wid` property (a real native child window/view
+# mpv draws into with its own GPU-accelerated output) on every desktop OS, not
+# the render API's off-screen FBO + CPU readback path, so no GL context of our
+# own is needed. No platform-specific code inside either crate around `wid` -
+# safe to share the same dependency across windows/linux/macos.
+[target.'cfg(any(windows, target_os = "linux", target_os = "macos"))'.dependencies]
 libmpv2 = "6"
 # For `mpv_request_log_messages` directly - `libmpv2` itself doesn't wrap it
 # (its own doc comment calls it "unimplemented"). Pinned to whatever version
 # `libmpv2` 6.x actually resolves against, not an independent choice.
 libmpv2-sys = "4"
+
+# GTK/X11 embedding (see `mpv_player::window_linux`) - already resolved
+# transitively via tauri/wry/tao, promoted to direct deps.
+[target.'cfg(target_os = "linux")'.dependencies]
+gtk = "0.18"
+gdk = "0.18"
+cairo-rs = "0.18"
+
+# AppKit embedding (see `mpv_player::window_macos`) - objc2/objc2-app-kit/
+# objc2-core-graphics are already resolved transitively via tauri/wry; only
+# objc2-quartz-core (CAShapeLayer, for the clip-region mask) is new.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", features = ["NSGraphics"] }
+objc2-foundation = "0.3"
+objc2-quartz-core = "0.3"
+objc2-core-graphics = "0.3"
+core-graphics = "0.25"
 
 [dev-dependencies]
 # Exercises `StreamQuery` deserialization exactly as axum's `Query` extractor does.

@@ -11,8 +11,35 @@ use std::sync::{Arc, Mutex};
 use libmpv2::events::PropertyData;
 use libmpv2::{Format, Mpv};
 use serde::Serialize;
+use tauri::AppHandle;
 
-use super::window::{self, SendHwnd};
+use super::window_impl;
+
+#[cfg(windows)]
+use super::window;
+#[cfg(target_os = "linux")]
+use super::window_linux;
+#[cfg(target_os = "macos")]
+use super::window_macos;
+
+/// One name for whichever platform's render-target handle this build has.
+#[cfg(windows)]
+pub(crate) type NativeHandle = window::SendHwnd;
+#[cfg(target_os = "linux")]
+pub(crate) type NativeHandle = window_linux::SendSocket;
+#[cfg(target_os = "macos")]
+pub(crate) type NativeHandle = window_macos::SendView;
+
+/// Computed here (not in `window.rs`, which stays untouched) on Windows;
+/// Linux/macOS delegate to their own modules.
+#[cfg(windows)]
+fn wid_value(handle: &NativeHandle) -> i64 {
+    (handle.0).0 as i64
+}
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+fn wid_value(handle: &NativeHandle) -> i64 {
+    window_impl::wid_value(handle)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -44,7 +71,7 @@ pub type SharedState = Arc<Mutex<EmbeddedMpvSession>>;
 pub struct MpvSession {
     mpv: Arc<Mpv>,
     state: SharedState,
-    hwnd: SendHwnd,
+    handle: NativeHandle,
     event_stop: Arc<AtomicBool>,
     event_thread: Mutex<Option<std::thread::JoinHandle<()>>>,
 }
@@ -58,17 +85,23 @@ fn touch(state: &SharedState) {
 }
 
 impl MpvSession {
-    /// `hwnd` must already be a live window created via `window::create` on
-    /// the main thread (see `commands/mpv.rs`'s `on_main_thread`). Only
-    /// builds the `Mpv` core and points it at that window via `wid` - never
-    /// touches Win32 itself, so this can run on any thread.
-    pub fn start(id: String, url: String, title: String, hwnd: SendHwnd, start_position_seconds: Option<f64>) -> Result<Arc<Self>, String> {
-        let hwnd_value = (hwnd.0).0 as i64;
+    /// `handle` must be a live window/view from `window_impl::create` on the
+    /// main thread. `app` is only used on Linux/macOS (`pointer_bridge`) -
+    /// accepted unconditionally for one uniform signature.
+    pub fn start(
+        app: AppHandle,
+        id: String,
+        url: String,
+        title: String,
+        handle: NativeHandle,
+        start_position_seconds: Option<f64>,
+    ) -> Result<Arc<Self>, String> {
+        let wid = wid_value(&handle);
         let mpv = Arc::new(
             Mpv::with_initializer(|init| {
                 // The property that makes this "embedded" - mpv renders
-                // into this window (vo=gpu) instead of its own top-level one.
-                init.set_property("wid", hwnd_value).map_err(libmpv2::Error::from)?;
+                // into this surface (vo=gpu) instead of its own top-level one.
+                init.set_property("wid", wid).map_err(libmpv2::Error::from)?;
                 init.set_property("keep-open", "yes")?; // don't auto-terminate the core at EOF - we read `eof-reached` ourselves
                 init.set_property("idle", "yes")?;
                 // Every URL handed to mpv is already a resolved, direct
@@ -95,22 +128,22 @@ impl MpvSession {
         }));
 
         let event_stop = Arc::new(AtomicBool::new(false));
-        let event_thread = spawn_event_thread(mpv.clone(), state.clone(), event_stop.clone());
+        let event_thread = spawn_event_thread(mpv.clone(), state.clone(), event_stop.clone(), app, id);
 
         mpv.command("loadfile", &[&url, "replace"]).map_err(|e| format!("loadfile failed: {e}"))?;
         if let Some(pos) = start_position_seconds.filter(|p| *p > 0.0) {
             let _ = mpv.set_property("start", pos.to_string());
         }
 
-        Ok(Arc::new(Self { mpv, state, hwnd, event_stop, event_thread: Mutex::new(Some(event_thread)) }))
+        Ok(Arc::new(Self { mpv, state, handle, event_stop, event_thread: Mutex::new(Some(event_thread)) }))
     }
 
     pub fn snapshot(&self) -> EmbeddedMpvSession {
         self.state.lock().unwrap().clone()
     }
 
-    pub fn hwnd(&self) -> SendHwnd {
-        self.hwnd
+    pub fn native_handle(&self) -> NativeHandle {
+        self.handle.clone()
     }
 
     pub fn play_pause(&self, paused: bool) -> Result<(), String> {
@@ -138,22 +171,23 @@ impl MpvSession {
         Ok(())
     }
 
-    /// Stops the event thread and destroys the native window. The
-    /// window-destroy step must run on the main thread - callers wrap this
-    /// with `commands/mpv.rs`'s `on_main_thread` helper.
+    /// Stops the event thread and destroys the native window/view. The
+    /// destroy step must run on the main thread - callers wrap this with
+    /// `commands/mpv.rs`'s `on_main_thread` helper.
     pub fn stop(&self) {
         self.event_stop.store(true, Ordering::Relaxed);
         if let Some(join) = self.event_thread.lock().unwrap().take() {
             let _ = join.join();
         }
-        window::destroy(self.hwnd);
+        window_impl::destroy(self.handle.clone());
         // `mpv.command("quit", ...)` isn't needed - once the caller drops
         // this `Arc<MpvSession>`, `self.mpv`'s last reference goes with it
         // and `Mpv::drop` runs, which calls `mpv_destroy` itself.
     }
 }
 
-fn spawn_event_thread(event_client: Arc<Mpv>, state: SharedState, stop: Arc<AtomicBool>) -> std::thread::JoinHandle<()> {
+/// `app`/`session_id` are only used on Linux/macOS (`pointer_bridge`) - accepted unconditionally for one uniform signature.
+fn spawn_event_thread(event_client: Arc<Mpv>, state: SharedState, stop: Arc<AtomicBool>, app: AppHandle, session_id: String) -> std::thread::JoinHandle<()> {
     std::thread::Builder::new()
         .name("mpv-events".into())
         .spawn(move || {
@@ -177,6 +211,16 @@ fn spawn_event_thread(event_client: Arc<Mpv>, state: SharedState, stop: Arc<Atom
             let _ = event_client.observe_property("volume", Format::Double, 4);
             let _ = event_client.observe_property("eof-reached", Format::Flag, 5);
 
+            // See `pointer_bridge`'s module doc - folded into this thread, not a second one.
+            #[cfg(any(target_os = "linux", target_os = "macos"))]
+            let mut pointer_bridge = {
+                let bridge = super::pointer_bridge::PointerBridge::new(app, session_id);
+                bridge.observe(&event_client);
+                bridge
+            };
+            #[cfg(windows)]
+            let _ = (app, session_id); // unused on Windows - see this fn's doc comment
+
             loop {
                 if stop.load(Ordering::Relaxed) {
                     break;
@@ -192,6 +236,8 @@ fn spawn_event_thread(event_client: Arc<Mpv>, state: SharedState, stop: Arc<Atom
                         s.updated_at = now_rfc3339();
                     }
                     Some(Ok(libmpv2::events::Event::PropertyChange { name, change, .. })) => {
+                        #[cfg(any(target_os = "linux", target_os = "macos"))]
+                        pointer_bridge.handle_property_change(name, &change);
                         let mut s = state.lock().unwrap();
                         match (name, change) {
                             ("pause", PropertyData::Flag(paused)) => {
@@ -206,6 +252,10 @@ fn spawn_event_thread(event_client: Arc<Mpv>, state: SharedState, stop: Arc<Atom
                             _ => {}
                         }
                         s.updated_at = now_rfc3339();
+                    }
+                    #[cfg(any(target_os = "linux", target_os = "macos"))]
+                    Some(Ok(libmpv2::events::Event::ClientMessage(args))) => {
+                        pointer_bridge.handle_client_message(&args);
                     }
                     Some(Err(e)) => {
                         let mut s = state.lock().unwrap();

@@ -9,4 +9,7 @@ dist/
 src-tauri/target/
 src-tauri/gen/
 
+# CI-generated (see release.yml's "install mpv (macOS)" step), never committed.
+src-tauri/native-libs/mpv-macos-runtime/
+
 .claude/settings.local.json

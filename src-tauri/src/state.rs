@@ -1,5 +1,5 @@
 use crate::db::DbPool;
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "linux", target_os = "macos"))]
 use crate::mpv_player::MpvSession;
 use reqwest::Client;
 use std::collections::{HashMap, HashSet};
@@ -10,8 +10,8 @@ use std::time::Instant;
 
 /// In-process embedded mpv playback sessions, keyed by session id (a fresh
 /// UUID per `mpv_start_session` call, never reused, so a stale session
-/// mid-teardown can't be confused with a new one). Windows-only.
-#[cfg(windows)]
+/// mid-teardown can't be confused with a new one). Desktop-only (not mobile).
+#[cfg(any(windows, target_os = "linux", target_os = "macos"))]
 pub type MpvSessionRegistry = Arc<Mutex<HashMap<String, Arc<MpvSession>>>>;
 
 /// Cooperative control for one in-flight download's background task. The
@@ -54,7 +54,7 @@ pub struct AppState {
     /// possible - there is no other handle to a spawned mpv/vlc process.
     pub players: Mutex<HashMap<String, tokio::process::Child>>,
     /// In-process embedded mpv playback sessions - see `MpvSessionRegistry`.
-    #[cfg(windows)]
+    #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
     pub mpv_sessions: MpvSessionRegistry,
     /// Serializes `mpv_start_session` end-to-end (whole command body, not
     /// just the registry check) - load-bearing, not defensive caution: near-
@@ -64,7 +64,7 @@ pub struct AppState {
     /// `tokio::sync::Mutex` (held across `.await`), not a std one, so each
     /// call fully finishes (including registering itself) before the next
     /// begins its stale-session check.
-    #[cfg(windows)]
+    #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
     pub mpv_start_lock: tokio::sync::Mutex<()>,
 }
 
@@ -83,9 +83,9 @@ impl AppState {
             downloads_dir: PathBuf::new(),
             downloads: Mutex::new(HashMap::new()),
             players: Mutex::new(HashMap::new()),
-            #[cfg(windows)]
+            #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
             mpv_sessions: Arc::new(Mutex::new(HashMap::new())),
-            #[cfg(windows)]
+            #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
             mpv_start_lock: tokio::sync::Mutex::new(()),
         }
     }
