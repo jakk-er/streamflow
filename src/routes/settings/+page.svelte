@@ -115,8 +115,7 @@
           </p>
 
           <div class="flex gap-3">
-            <!-- TODO: replace with the real repo URL once StreamFlow is pushed to GitHub -->
-            <a href="https://github.com/streamflow-app/streamflow" target="_blank" rel="noopener noreferrer" class="rounded-lg bg-gray-800 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 transition-colors">
+            <a href="https://github.com/jakk-er/streamflow" target="_blank" rel="noopener noreferrer" class="rounded-lg bg-gray-800 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 transition-colors">
               GitHub
             </a>
           </div>
