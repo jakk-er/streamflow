@@ -1,0 +1,77 @@
+[package]
+name = "streamflow"
+version = "0.1.0"
+description = "StreamFlow IPTV desktop app"
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "streamflow_lib"
+crate-type = ["staticlib", "cdylib", "lib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+# Native file-picker for Settings' MPV/VLC path "Browse" buttons.
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+r2d2 = "0.8"
+r2d2_sqlite = "0.25"
+rusqlite = { version = "0.32", features = ["bundled"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls", "gzip"] }
+quick-xml = "0.36"
+axum = "0.7"
+tower-http = { version = "0.6", features = ["catch-panic"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+chrono-tz = "0.10"
+sha1 = "0.10"
+sha2 = "0.10"
+percent-encoding = "2"
+base64 = "0.22"
+urlencoding = "2"
+regex = "1"
+flate2 = "1"
+futures-util = "0.3"
+thiserror = "1"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+anyhow = "1"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_Controls",
+    "Win32_System_LibraryLoader",
+] }
+# In-process embedded MKV/HEVC playback (native <video> can't decode Matroska
+# at all - a demuxer gap, not a codec gap). Base crate only, no "render"
+# feature - this embeds via mpv's `wid` property (a real native child window
+# mpv draws into with its own GPU-accelerated output), not the render API's
+# off-screen FBO + CPU readback path, so no GL context of our own is needed.
+# Windows-only dependency, matching `mod mpv_player`'s own `#[cfg(windows)]` -
+# libmpv2-sys links against a system mpv via pkg-config, which non-Windows CI
+# runners don't have and this feature doesn't need there anyway.
+libmpv2 = "6"
+# For `mpv_request_log_messages` directly - `libmpv2` itself doesn't wrap it
+# (its own doc comment calls it "unimplemented"). Pinned to whatever version
+# `libmpv2` 6.x actually resolves against, not an independent choice.
+libmpv2-sys = "4"
+
+[dev-dependencies]
+# Exercises `StreamQuery` deserialization exactly as axum's `Query` extractor does.
+serde_urlencoded = "0.7"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

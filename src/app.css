@@ -1,0 +1,321 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: 240 10% 4%;
+    --foreground: 210 40% 98%;
+    --surface: 240 12% 8%;
+    --surface-elevated: 240 12% 12%;
+    --surface-hover: 240 12% 16%;
+    --border: 240 10% 18%;
+    --border-hover: 240 10% 25%;
+    --primary: 239 84% 67%;
+    --primary-hover: 239 84% 77%;
+    --primary-glow: 239 84% 67%;
+    --accent: 263 70% 50%;
+    --accent-hover: 263 70% 60%;
+    --text-primary: 210 40% 98%;
+    --text-secondary: 215 20% 65%;
+    --text-muted: 215 16% 47%;
+    --success: 142 71% 45%;
+    --warning: 38 92% 50%;
+    --error: 0 84% 60%;
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+  }
+
+  .light {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --surface: 0 0% 98%;
+    --surface-elevated: 0 0% 100%;
+    --surface-hover: 0 0% 96%;
+    --border: 214 32% 91%;
+    --primary: 239 84% 53%;
+    --text-primary: 222 47% 11%;
+    --text-secondary: 215 16% 47%;
+  }
+}
+
+@theme {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-surface: hsl(var(--surface));
+  --color-surface-elevated: hsl(var(--surface-elevated));
+  --color-surface-hover: hsl(var(--surface-hover));
+  --color-border: hsl(var(--border));
+  --color-border-hover: hsl(var(--border-hover));
+  --color-primary: hsl(var(--primary));
+  --color-primary-hover: hsl(var(--primary-hover));
+  --color-primary-glow: hsl(var(--primary-glow));
+  --color-accent: hsl(var(--accent));
+  --color-accent-hover: hsl(var(--accent-hover));
+  --color-text-primary: hsl(var(--text-primary));
+  --color-text-secondary: hsl(var(--text-secondary));
+  --color-text-muted: hsl(var(--text-muted));
+  --color-success: hsl(var(--success));
+  --color-warning: hsl(var(--warning));
+  --color-error: hsl(var(--error));
+}
+
+@layer base {
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--border-hover));
+  }
+
+  :focus-visible {
+    outline: none;
+    ring: 2px;
+    ring-color: hsl(var(--primary));
+    ring-offset: 2px;
+    ring-offset-color: hsl(var(--background));
+  }
+
+  ::selection {
+    background-color: hsl(var(--primary) / 0.3);
+  }
+}
+
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: var(--radius-lg);
+    font-weight: 500;
+    transition: all 0.2s ease-out;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn:focus-visible {
+    outline: none;
+    ring: 2px;
+    ring-color: hsl(var(--primary));
+    ring-offset: 2px;
+    ring-offset-color: hsl(var(--background));
+  }
+
+  .btn-primary {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--foreground));
+    box-shadow: 0 10px 15px -3px hsl(var(--primary) / 0.25);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background-color: hsl(var(--primary-hover));
+    transform: scale(1.02);
+  }
+
+  .btn-primary:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  .btn-secondary {
+    background-color: hsl(var(--surface-elevated));
+    color: hsl(var(--text-primary));
+    border: 1px solid hsl(var(--border));
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background-color: hsl(var(--surface-hover));
+    border-color: hsl(var(--border-hover));
+  }
+
+  .btn-ghost {
+    background-color: transparent;
+    color: hsl(var(--text-secondary));
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    background-color: hsl(var(--surface-hover));
+    color: hsl(var(--text-primary));
+  }
+
+  .btn-danger {
+    background-color: hsl(var(--error) / 0.1);
+    color: hsl(var(--error));
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    background-color: hsl(var(--error) / 0.2);
+  }
+
+  .btn-sm {
+    height: 2rem;
+    padding: 0 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .btn-md {
+    height: 2.5rem;
+    padding: 0 1rem;
+    font-size: 0.875rem;
+  }
+
+  .btn-lg {
+    height: 3rem;
+    padding: 0 1.5rem;
+    font-size: 1rem;
+  }
+
+  .card {
+    background-color: hsl(var(--surface));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    transition: all 0.2s ease-out;
+  }
+
+  .card-hover:hover {
+    border-color: hsl(var(--border-hover));
+    background-color: hsl(var(--surface-hover));
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  }
+
+  .input {
+    width: 100%;
+    background-color: hsl(var(--surface));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius-lg);
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    color: hsl(var(--text-primary));
+    transition: all 0.2s ease-out;
+  }
+
+  .input::placeholder {
+    color: hsl(var(--text-muted));
+  }
+
+  .input:focus {
+    outline: none;
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 1px hsl(var(--primary));
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.125rem 0.625rem;
+  }
+
+  .badge-default {
+    background-color: hsl(var(--surface-elevated));
+    color: hsl(var(--text-secondary));
+    border: 1px solid hsl(var(--border));
+  }
+
+  .badge-primary {
+    background-color: hsl(var(--primary) / 0.15);
+    color: hsl(var(--primary));
+    border: 1px solid hsl(var(--primary) / 0.25);
+  }
+
+  .badge-accent {
+    background-color: hsl(var(--accent) / 0.15);
+    color: hsl(var(--accent));
+    border: 1px solid hsl(var(--accent) / 0.25);
+  }
+
+  .badge-success {
+    background-color: hsl(var(--success) / 0.15);
+    color: hsl(var(--success));
+    border: 1px solid hsl(var(--success) / 0.25);
+  }
+
+  .skeleton {
+    background-color: hsl(var(--surface-elevated));
+    border-radius: var(--radius-lg);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      hsl(var(--surface-elevated)) 25%,
+      hsl(var(--surface-hover)) 50%,
+      hsl(var(--surface-elevated)) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+  }
+
+  .glass {
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+  }
+
+  .glass-surface {
+    background-color: hsl(var(--surface) / 0.9);
+  }
+
+  .glass-background {
+    background-color: hsl(var(--background) / 0.8);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

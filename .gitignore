@@ -1,0 +1,12 @@
+node_modules/
+build/
+.svelte-kit/
+dist/
+.env
+.env.*
+!.env.example
+
+src-tauri/target/
+src-tauri/gen/
+
+.claude/settings.local.json
