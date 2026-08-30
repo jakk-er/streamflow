@@ -14,10 +14,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Apple Silicon only - x86_64 dropped: Homebrew has no precompiled
+          # mpv bottle for x86_64-under-Rosetta-on-arm64 (Tier 3, source-build
+          # only), which isn't worth the CI time/fragility for a shrinking
+          # Intel Mac audience.
           - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
-          - platform: 'macos-latest'
-            args: '--target x86_64-apple-darwin'
           - platform: 'ubuntu-22.04'
             args: ''
           - platform: 'windows-latest'
@@ -33,7 +35,7 @@ jobs:
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || '' }}
 
       - name: install Linux system dependencies
         if: matrix.platform == 'ubuntu-22.04'
@@ -44,19 +46,10 @@ jobs:
       - name: install mpv (macOS)
         if: matrix.platform == 'macos-latest'
         run: |
-          if [[ "${{ matrix.args }}" == *"x86_64"* ]]; then
-            # Runner is Apple Silicon - native Homebrew's mpv is arm64 and can't link into an x86_64 binary, so bootstrap a separate x86_64 Homebrew under Rosetta just for this leg.
-            softwareupdate --install-rosetta --agree-to-license
-            NONINTERACTIVE=1 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-            arch -x86_64 /usr/local/bin/brew install mpv
-            mpv_prefix=$(arch -x86_64 /usr/local/bin/brew --prefix mpv)
-          else
-            brew install mpv
-            mpv_prefix=$(brew --prefix mpv)
-          fi
+          brew install mpv
           # Copied so install_name_tool can rewrite its ID to @rpath (brew's own copy has an absolute path baked in) - build.rs links against this fixed copy, not brew's.
           mkdir -p src-tauri/native-libs/mpv-macos-runtime
-          dylib=$(find "$mpv_prefix/lib" -name 'libmpv*.dylib' ! -type l | head -n1)
+          dylib=$(find "$(brew --prefix mpv)/lib" -name 'libmpv*.dylib' ! -type l | head -n1)
           cp "$dylib" src-tauri/native-libs/mpv-macos-runtime/libmpv.dylib
           install_name_tool -id @rpath/libmpv.dylib src-tauri/native-libs/mpv-macos-runtime/libmpv.dylib
 
