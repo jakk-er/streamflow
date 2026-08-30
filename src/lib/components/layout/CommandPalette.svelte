@@ -111,24 +111,27 @@
   // Keyboard shortcuts
   import { registerShortcut } from '$lib/utils/keyboard';
 
-  const unregisterOpen = registerShortcut('ctrl+k', open);
-  const unregisterCmdK = registerShortcut('cmd+k', open);
-  const unregisterEscape = registerShortcut('escape', close);
+  // `allowInInputs: true` - these must keep working while the palette's own
+  // search box has focus (and ctrl+k/cmd+k should open the palette even
+  // while typing in some other field, e.g. the Live TV channel search).
+  const unregisterOpen = registerShortcut('ctrl+k', open, { allowInInputs: true });
+  const unregisterCmdK = registerShortcut('cmd+k', open, { allowInInputs: true });
+  const unregisterEscape = registerShortcut('escape', close, { allowInInputs: true });
   const unregisterArrowDown = registerShortcut('arrowdown', () => {
     if (isOpen) {
       selectNext();
     }
-  });
+  }, { allowInInputs: true });
   const unregisterArrowUp = registerShortcut('arrowup', () => {
     if (isOpen) {
       selectPrev();
     }
-  });
+  }, { allowInInputs: true });
   const unregisterEnter = registerShortcut('enter', () => {
     if (isOpen) {
       executeSelected();
     }
-  });
+  }, { allowInInputs: true });
 
   // Cleanup
   import { onMount } from 'svelte';

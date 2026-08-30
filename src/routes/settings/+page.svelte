@@ -106,7 +106,7 @@
             <img src="/streamflow-icon.svg" alt="" class="w-12 h-12 flex-shrink-0" />
             <div>
               <h3 class="text-lg font-semibold text-white">StreamFlow</h3>
-              <p class="text-sm text-gray-400">Version 0.1.0</p>
+              <p class="text-sm text-gray-400">Version 0.1.1</p>
             </div>
           </div>
 

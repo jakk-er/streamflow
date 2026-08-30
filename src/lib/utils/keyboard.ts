@@ -1,5 +1,17 @@
-export function registerShortcut(keys: string, callback: () => void): () => void {
+/** True while the user is typing into a text field / textarea / select /
+ * contenteditable - shortcuts default to standing down there so e.g. typing
+ * "f"/"m"/"k"/space/digits into a search box types normally instead of
+ * triggering a global fullscreen/mute/channel-number shortcut. */
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT';
+}
+
+export function registerShortcut(keys: string, callback: () => void, options?: { allowInInputs?: boolean }): () => void {
   const handler = (event: KeyboardEvent) => {
+    if (!options?.allowInInputs && isEditableTarget(event.target)) return;
+
     const parts = keys.toLowerCase().split('+').map(k => k.trim());
     const key = parts.pop()!;
     const modifiers = parts;
@@ -38,6 +50,7 @@ export function registerChannelNumber(callback: (num: number) => void): () => vo
   let timeout: number | null = null;
 
   const handler = (event: KeyboardEvent) => {
+    if (isEditableTarget(event.target)) return;
     if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
     if (event.key.length !== 1) return;
     const code = event.key;
