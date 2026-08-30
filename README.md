@@ -25,6 +25,21 @@ A modern desktop IPTV player built with **Tauri**, **SvelteKit**, and **Rust**. 
 - **Downloads**: save VOD content locally for offline viewing.
 - **Favorites & watch history**, a default-playlist launch option, dark/light/system theming, and support for 19 languages.
 
+## Platform Support
+
+Prebuilt installers are published on the [Releases](../../releases) page for every tagged version.
+
+| Platform | Installer | Embedded MKV/HEVC playback |
+|---|---|---|
+| Windows | `.exe` / `.msi` | ✅ |
+| Linux | `.deb` / `.rpm` / `.AppImage` | ✅ (requires an X11 session or XWayland — forced automatically even on Wayland desktops) |
+| macOS (Apple Silicon) | `.dmg` | ✅ |
+| macOS (Intel) | — not published — | — |
+
+External playback via mpv/VLC (if installed) works on every platform regardless of the table above — only the *embedded* in-app player has these constraints.
+
+Embedded playback on Linux and macOS is new and builds clean in CI, but hasn't yet been extensively verified on real hardware — if something looks off there (video not appearing, overlay controls not clickable), please [open an issue](../../issues).
+
 ## Getting Started
 
 ### Prerequisites
