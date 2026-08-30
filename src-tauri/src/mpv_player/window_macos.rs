@@ -15,8 +15,9 @@ use objc2::rc::Retained;
 use objc2::runtime::NSObjectProtocol;
 use objc2::{define_class, msg_send, DefinedClass, MainThreadOnly};
 use objc2_app_kit::{NSView, NSWindowOrderingMode};
+use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use objc2_core_graphics::CGPath;
-use objc2_foundation::{CGPoint, CGRect, CGSize, MainThreadMarker, NSPoint, NSRect, NSSize};
+use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize};
 use objc2_quartz_core::CAShapeLayer;
 use tauri::AppHandle;
 
@@ -44,21 +45,20 @@ define_class!(
 
     impl MpvHostView {
         /// Returns `None` inside an excluded rect so the click falls through to what's beneath.
+        /// No early `return` - the macro's `Retained` conversion only wraps the tail expression.
         #[unsafe(method_id(hitTest:))]
         fn hit_test(&self, point: NSPoint) -> Option<Retained<NSView>> {
-            {
+            let inside_excluded = {
                 let exclude = self.ivars().exclude.lock().unwrap();
-                for ex in exclude.iter() {
-                    if point.x >= ex.x as f64
-                        && point.x <= (ex.x + ex.width) as f64
-                        && point.y >= ex.y as f64
-                        && point.y <= (ex.y + ex.height) as f64
-                    {
-                        return None;
-                    }
-                }
+                exclude.iter().any(|ex| {
+                    point.x >= ex.x as f64 && point.x <= (ex.x + ex.width) as f64 && point.y >= ex.y as f64 && point.y <= (ex.y + ex.height) as f64
+                })
+            };
+            if inside_excluded {
+                None
+            } else {
+                unsafe { msg_send![super(self), hitTest: point] }
             }
-            unsafe { msg_send![super(self), hitTest: point] }
         }
     }
 );
@@ -91,7 +91,7 @@ fn to_nsrect(bounds: WindowBounds, superview_height: f64) -> NSRect {
 pub fn create(_app: AppHandle, _session_id: String, parent_ns_view: *mut std::ffi::c_void, bounds: WindowBounds) -> Result<SendView, String> {
     let mtm = MainThreadMarker::new().ok_or("mpv window_macos::create called off the main thread")?;
     let webview_view: &NSView = unsafe { &*(parent_ns_view as *mut NSView) };
-    let superview = webview_view.superview().ok_or("webview NSView has no superview")?;
+    let superview = unsafe { webview_view.superview() }.ok_or("webview NSView has no superview")?;
 
     let frame = to_nsrect(bounds, superview.frame().size.height);
     let view = MpvHostView::new(mtm, frame);
@@ -106,7 +106,7 @@ pub fn create(_app: AppHandle, _session_id: String, parent_ns_view: *mut std::ff
 
 /// No resize-vs-rescale concern here unlike Windows - just tracks the div 1:1.
 pub fn set_bounds(handle: SendView, bounds: WindowBounds) {
-    let Some(superview) = handle.0.superview() else { return };
+    let Some(superview) = (unsafe { handle.0.superview() }) else { return };
     let frame = to_nsrect(bounds, superview.frame().size.height);
     unsafe { handle.0.setFrame(frame) };
 }
@@ -130,19 +130,21 @@ pub fn set_region(handle: SendView, bounds: WindowBounds, exclude: &[WindowBound
 
     *handle.0.ivars().exclude.lock().unwrap() = local.clone();
 
-    // Full rect + each excluded rect as its own subpath, even-odd fill punches the hole.
+    // Start from the full rect, geometrically subtract each excluded rect - no fill-rule trick needed.
     let full = CGRect { origin: CGPoint { x: 0.0, y: 0.0 }, size: CGSize { width: bounds.width.max(1) as f64, height: bounds.height.max(1) as f64 } };
-    let mut rects = vec![full];
+    let mut path = unsafe { CGPath::with_rect(full, std::ptr::null()) };
     for ex in &local {
-        rects.push(CGRect {
+        let hole_rect = CGRect {
             origin: CGPoint { x: ex.x as f64, y: ex.y as f64 },
             size: CGSize { width: ex.width.max(1) as f64, height: ex.height.max(1) as f64 },
-        });
+        };
+        let hole = unsafe { CGPath::with_rect(hole_rect, std::ptr::null()) };
+        if let Some(subtracted) = CGPath::new_copy_by_subtracting_path(Some(&*path), Some(&*hole), false) {
+            path = subtracted;
+        }
     }
-    let path = unsafe { CGPath::with_rects(&rects, None) };
     let mask_layer = CAShapeLayer::new();
-    unsafe { mask_layer.setPath(Some(&path)) };
-    unsafe { mask_layer.setFillRule(Some(&objc2_foundation::NSString::from_str("even-odd"))) };
+    unsafe { mask_layer.setPath(Some(&*path)) };
     if let Some(layer) = handle.0.layer() {
         unsafe { layer.setMask(Some(&mask_layer)) };
     }

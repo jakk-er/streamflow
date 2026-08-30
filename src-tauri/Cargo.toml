@@ -74,15 +74,15 @@ gdk = "0.18"
 cairo-rs = "0.18"
 
 # AppKit embedding (see `mpv_player::window_macos`) - objc2/objc2-app-kit/
-# objc2-core-graphics are already resolved transitively via tauri/wry; only
-# objc2-quartz-core (CAShapeLayer, for the clip-region mask) is new.
+# objc2-core-graphics/objc2-core-foundation are already resolved transitively
+# via tauri/wry; only objc2-quartz-core (CAShapeLayer, for the clip mask) is new.
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
 objc2-app-kit = { version = "0.3", features = ["NSGraphics"] }
 objc2-foundation = "0.3"
 objc2-quartz-core = "0.3"
 objc2-core-graphics = "0.3"
-core-graphics = "0.25"
+objc2-core-foundation = "0.3"
 
 [dev-dependencies]
 # Exercises `StreamQuery` deserialization exactly as axum's `Query` extractor does.
