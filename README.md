@@ -77,4 +77,10 @@ Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for dev set
 
 ## License
 
-[MIT](LICENSE)
+[MIT](https://github.com/jakk-er/streamflow/blob/main/LICENSE)
+
+## Disclaimer
+
+StreamFlow is a media player only. It does not host, provide, index, or distribute any streams, channels, or content, and no content is bundled with the app. It is designed to connect to IPTV sources (M3U playlists, Xtream Codes panels, Stalker/Ministra portals) that you provide.
+
+You are solely responsible for ensuring you have the legal right to access and use any content through any source you configure with this app, and for complying with your local laws. The developer(s) assume no liability for misuse of this software.
